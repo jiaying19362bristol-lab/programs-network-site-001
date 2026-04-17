@@ -99,6 +99,7 @@ const imageInput = document.querySelector("#image-input");
 const insertImageButton = document.querySelector("#insert-image-button");
 const detailKicker = document.querySelector("#detail-kicker");
 const documentStatus = document.querySelector("#document-status");
+const readonlyBanner = document.querySelector("#readonly-banner");
 const detailTitle = document.querySelector("#detail-title");
 const editorSurface = document.querySelector("#editor-surface");
 const fontSizeSelect = document.querySelector("#font-size-select");
@@ -110,6 +111,7 @@ const HANDLE_DB_NAME = "design-archive-handles";
 const HANDLE_STORE_NAME = "handles";
 const DIRECTORY_HANDLE_KEY = "export-directory";
 const CLOUD_REGISTRY_KEY = "design-archive-cloud-sites-v1";
+const IS_READONLY_CLOUD = window.location.protocol !== "file:";
 
 let sections = loadSections();
 let activeProjectRef = null;
@@ -125,37 +127,42 @@ routeFromHash();
 initializeDocumentStorage();
 startAutosaveTimer();
 renderCloudSites();
+applyReadonlyMode();
 
 window.addEventListener("hashchange", routeFromHash);
 cloudSitesButton.addEventListener("click", toggleCloudSitesMenu);
 backButton.addEventListener("click", () => {
-  saveActiveProject();
+  if (!IS_READONLY_CLOUD) {
+    saveActiveProject();
+  }
   window.location.hash = "";
 });
-saveButtonTop.addEventListener("click", saveActiveProject);
-moveProjectButton.addEventListener("click", toggleMoveMenu);
-saveButton.addEventListener("click", saveActiveProject);
-bindFolderButton.addEventListener("click", connectDocumentFolder);
-deleteButton.addEventListener("click", deleteActiveProject);
-imageInput.addEventListener("change", handleImageUpload);
-insertImageButton.addEventListener("click", () => imageInput.click());
-fontSizeSelect.addEventListener("change", () => {
-  focusEditor();
-  document.execCommand("fontSize", false, fontSizeSelect.value);
-});
-fontColorInput.addEventListener("input", () => {
-  focusEditor();
-  document.execCommand("foreColor", false, fontColorInput.value);
-});
-toolbarButtons.forEach((button) => {
-  button.addEventListener("click", () => {
+if (!IS_READONLY_CLOUD) {
+  saveButtonTop.addEventListener("click", saveActiveProject);
+  moveProjectButton.addEventListener("click", toggleMoveMenu);
+  saveButton.addEventListener("click", saveActiveProject);
+  bindFolderButton.addEventListener("click", connectDocumentFolder);
+  deleteButton.addEventListener("click", deleteActiveProject);
+  imageInput.addEventListener("change", handleImageUpload);
+  insertImageButton.addEventListener("click", () => imageInput.click());
+  fontSizeSelect.addEventListener("change", () => {
     focusEditor();
-    document.execCommand(button.dataset.command, false);
+    document.execCommand("fontSize", false, fontSizeSelect.value);
   });
-});
-editorSurface.addEventListener("mouseup", saveSelection);
-editorSurface.addEventListener("keyup", saveSelection);
-editorSurface.addEventListener("focus", saveSelection);
+  fontColorInput.addEventListener("input", () => {
+    focusEditor();
+    document.execCommand("foreColor", false, fontColorInput.value);
+  });
+  toolbarButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      focusEditor();
+      document.execCommand(button.dataset.command, false);
+    });
+  });
+  editorSurface.addEventListener("mouseup", saveSelection);
+  editorSurface.addEventListener("keyup", saveSelection);
+  editorSurface.addEventListener("focus", saveSelection);
+}
 document.addEventListener("click", handleOutsideMoveMenuClick);
 document.addEventListener("click", handleOutsideCloudMenuClick);
 
@@ -199,6 +206,21 @@ function loadCloudRegistry() {
     }
   });
 
+  if (IS_READONLY_CLOUD) {
+    const currentCloudSite = {
+      url: window.location.href,
+      lastUpdatedAt: buildCloudPageTimestamp(),
+      repo: extractRepoNameFromCloudUrl(window.location.pathname)
+    };
+
+    const existingCurrent = merged.find((entry) => entry.url === currentCloudSite.url);
+    if (!existingCurrent) {
+      merged.unshift(currentCloudSite);
+    } else if (!existingCurrent.lastUpdatedAt) {
+      existingCurrent.lastUpdatedAt = currentCloudSite.lastUpdatedAt;
+    }
+  }
+
   return merged;
 }
 
@@ -226,7 +248,11 @@ function renderSections() {
     kicker.textContent = section.kicker;
     title.textContent = section.title;
     addButton.setAttribute("aria-label", `Add new item to ${section.title}`);
-    addButton.addEventListener("click", () => addItem(section.id));
+    if (!IS_READONLY_CLOUD) {
+      addButton.addEventListener("click", () => addItem(section.id));
+    } else {
+      addButton.disabled = true;
+    }
     footerIndicator.textContent = `Page ${currentPage + 1} / ${totalPages}`;
     prevButton.disabled = currentPage === 0;
     nextButton.disabled = currentPage >= totalPages - 1;
@@ -293,7 +319,9 @@ function createCard(sectionId, sectionTitle, item) {
   link.addEventListener("click", () => {
     window.location.hash = createProjectHash(sectionId, item.id);
   });
-  deleteButton.addEventListener("click", () => deleteProjectFromHome(sectionId, sectionTitle, item.id));
+  if (!IS_READONLY_CLOUD) {
+    deleteButton.addEventListener("click", () => deleteProjectFromHome(sectionId, sectionTitle, item.id));
+  }
 
   return row;
 }
@@ -396,7 +424,9 @@ function renderActiveProject() {
 
   detailKicker.textContent = `${section.kicker} / ${section.title}`;
   detailTitle.value = item.title ?? "";
+  detailTitle.readOnly = IS_READONLY_CLOUD;
   editorSurface.innerHTML = item.content ?? "<p></p>";
+  editorSurface.setAttribute("contenteditable", String(!IS_READONLY_CLOUD));
   updateDocumentStatus(item);
   renderMoveOptions(section.id);
   savedSelection = null;
@@ -729,6 +759,11 @@ function showSaveFeedback() {
 }
 
 async function initializeDocumentStorage() {
+  if (IS_READONLY_CLOUD) {
+    documentStatus.textContent = "Cloud view uses read-only mode.";
+    return;
+  }
+
   if (!supportsDocumentSaving()) {
     documentStatus.textContent = "Word autosave requires a Chromium browser with local folder access support.";
     return;
@@ -746,6 +781,10 @@ async function initializeDocumentStorage() {
 }
 
 function startAutosaveTimer() {
+  if (IS_READONLY_CLOUD) {
+    return;
+  }
+
   if (autosaveTimerId) {
     window.clearInterval(autosaveTimerId);
   }
@@ -756,6 +795,10 @@ function startAutosaveTimer() {
 }
 
 async function connectDocumentFolder() {
+  if (IS_READONLY_CLOUD) {
+    return;
+  }
+
   if (!supportsDocumentSaving()) {
     documentStatus.textContent = "This browser does not support direct local Word autosave.";
     return;
@@ -891,6 +934,16 @@ function supportsDocumentSaving() {
   return typeof window.showDirectoryPicker === "function" && typeof indexedDB !== "undefined";
 }
 
+function applyReadonlyMode() {
+  if (!IS_READONLY_CLOUD) {
+    readonlyBanner.classList.add("hidden");
+    return;
+  }
+
+  document.body.classList.add("readonly-mode");
+  readonlyBanner.classList.remove("hidden");
+}
+
 function buildDocumentFileName(title) {
   const safeBase = (title || "Untitled Project")
     .replace(/[<>:"/\\|?*\u0000-\u001F]/g, " ")
@@ -908,6 +961,22 @@ function formatTimestamp(value) {
   }
 
   return date.toLocaleString();
+}
+
+function buildCloudPageTimestamp() {
+  if (document.lastModified) {
+    const modifiedDate = new Date(document.lastModified);
+    if (!Number.isNaN(modifiedDate.getTime())) {
+      return modifiedDate.toISOString();
+    }
+  }
+
+  return new Date().toISOString();
+}
+
+function extractRepoNameFromCloudUrl(pathname) {
+  const segments = pathname.split("/").filter(Boolean);
+  return segments[0] || "current-cloud-site";
 }
 
 function buildWordDocument(title, contentHtml) {

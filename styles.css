@@ -192,6 +192,12 @@ body::before {
   font-size: 0.92rem;
 }
 
+.readonly-banner {
+  margin: 0;
+  color: #8b3215;
+  font-size: 0.92rem;
+}
+
 .document-status.is-ready {
   color: #3f7f56;
 }
@@ -481,6 +487,18 @@ body::before {
 
 .hidden {
   display: none;
+}
+
+.readonly-mode .add-item-button,
+.readonly-mode .row-delete-button,
+.readonly-mode #save-button,
+.readonly-mode #save-button-top,
+.readonly-mode #move-project-button,
+.readonly-mode #bind-folder-button,
+.readonly-mode #delete-button,
+.readonly-mode .toolbar-panel,
+.readonly-mode .document-status {
+  display: none !important;
 }
 
 .row-delete-button {
