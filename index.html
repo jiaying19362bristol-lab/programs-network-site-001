@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Design Archive</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="page-shell">
+    <section id="home-view">
+      <div class="home-topbar">
+        <div class="cloud-sites-wrap">
+          <button id="cloud-sites-button" class="secondary-button topbar-button" type="button">Cloud Sites</button>
+          <div id="cloud-sites-menu" class="cloud-sites-menu hidden"></div>
+        </div>
+        <p id="cloud-sync-status" class="cloud-sync-status">Local-first mode. No cloud sites registered yet.</p>
+      </div>
+      <main id="section-list" class="section-list five-column-layout" aria-live="polite"></main>
+    </section>
+
+    <section id="detail-view" class="detail-view hidden" aria-live="polite">
+      <div class="detail-header">
+        <button id="back-button" class="secondary-button nav-button" type="button">Back To Home</button>
+        <button id="save-button-top" class="primary-button nav-button" type="button">Save Local</button>
+        <div class="move-menu-wrap">
+          <button id="move-project-button" class="secondary-button nav-button" type="button">Move To</button>
+          <div id="move-menu" class="move-menu hidden"></div>
+        </div>
+        <button id="bind-folder-button" class="secondary-button nav-button" type="button">Bind Save Folder</button>
+        <button id="delete-button" class="danger-button nav-button" type="button">Delete Project</button>
+      </div>
+
+      <article class="detail-panel">
+        <p id="detail-kicker" class="eyebrow"></p>
+        <p id="document-status" class="document-status">Word autosave folder not connected.</p>
+        <label class="detail-label">
+          <span>Project Name</span>
+          <input id="detail-title" type="text" maxlength="80" placeholder="Project name">
+        </label>
+
+        <div class="toolbar-panel">
+          <div class="editor-toolbar">
+            <button class="toolbar-button" type="button" data-command="bold">Bold</button>
+            <button class="toolbar-button" type="button" data-command="italic">Italic</button>
+            <button class="toolbar-button" type="button" data-command="underline">Underline</button>
+            <label class="toolbar-select">
+              <span>Font Size</span>
+              <select id="font-size-select">
+                <option value="3">16px</option>
+                <option value="4" selected>18px</option>
+                <option value="5">24px</option>
+                <option value="6">32px</option>
+                <option value="7">48px</option>
+              </select>
+            </label>
+            <label class="toolbar-select toolbar-color">
+              <span>Font Color</span>
+              <input id="font-color-input" type="color" value="#1f1a16">
+            </label>
+            <button id="insert-image-button" class="upload-button" type="button">Insert Picture</button>
+            <input id="image-input" class="hidden-input" type="file" accept="image/*" multiple>
+          </div>
+        </div>
+
+        <div id="editor-surface" class="editor-surface" contenteditable="true" spellcheck="true"></div>
+
+        <div class="detail-actions">
+          <button id="save-button" class="primary-button" type="button">Save Local</button>
+        </div>
+      </article>
+    </section>
+  </div>
+
+  <template id="section-template">
+    <section class="board-section">
+      <div class="section-header">
+        <div>
+          <p class="section-kicker"></p>
+          <h2 class="section-title"></h2>
+        </div>
+        <button class="add-item-button" type="button" aria-label="">
+          <span>+</span>
+        </button>
+      </div>
+      <div class="card-grid"></div>
+      <div class="section-footer">
+        <div class="page-indicator"></div>
+        <div class="pager-controls">
+          <button class="pager-button" type="button" data-action="prev" aria-label="Previous page">&#8249;</button>
+          <button class="pager-button" type="button" data-action="next" aria-label="Next page">&#8250;</button>
+        </div>
+      </div>
+    </section>
+  </template>
+
+  <template id="card-template">
+    <article class="project-row">
+      <button class="project-link" type="button"></button>
+      <button class="row-delete-button" type="button" data-action="delete" aria-label="Delete project">×</button>
+    </article>
+  </template>
+
+  <script src="cloud_sites.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
