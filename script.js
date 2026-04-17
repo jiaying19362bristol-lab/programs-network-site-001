@@ -186,14 +186,14 @@ function saveSections() {
 }
 
 function loadCloudRegistry() {
-  const bundledSites = Array.isArray(window.__CLOUD_SITES__) ? window.__CLOUD_SITES__ : [];
+  const bundledSites = normalizeCloudSites(window.__CLOUD_SITES__);
   const saved = localStorage.getItem(CLOUD_REGISTRY_KEY);
   let localSites = [];
 
   if (saved) {
     try {
       const parsed = JSON.parse(saved);
-      localSites = Array.isArray(parsed) ? parsed : [];
+      localSites = normalizeCloudSites(parsed);
     } catch {
       localSites = [];
     }
@@ -222,6 +222,22 @@ function loadCloudRegistry() {
   }
 
   return merged;
+}
+
+function normalizeCloudSites(input) {
+  if (Array.isArray(input)) {
+    return input.filter(isValidCloudSiteEntry);
+  }
+
+  if (input && typeof input === "object" && isValidCloudSiteEntry(input)) {
+    return [input];
+  }
+
+  return [];
+}
+
+function isValidCloudSiteEntry(entry) {
+  return Boolean(entry && typeof entry.url === "string" && entry.url.trim());
 }
 
 function saveCloudRegistry() {
