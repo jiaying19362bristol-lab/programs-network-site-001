@@ -68,7 +68,7 @@ const defaultSections = [
   {
     id: "other-projects",
     kicker: "Field 05",
-    title: "Others",
+    title: "Maintenance",
     items: [
       {
         id: crypto.randomUUID(),
@@ -95,22 +95,41 @@ const moveProjectButton = document.querySelector("#move-project-button");
 const moveMenu = document.querySelector("#move-menu");
 const saveButton = document.querySelector("#save-button");
 const bindFolderButton = document.querySelector("#bind-folder-button");
+const githubLoginButton = document.querySelector("#github-login-button");
+const uploadGitHubButton = document.querySelector("#upload-github-button");
 const imageInput = document.querySelector("#image-input");
 const insertImageButton = document.querySelector("#insert-image-button");
 const detailKicker = document.querySelector("#detail-kicker");
 const documentStatus = document.querySelector("#document-status");
+const repoSyncStatus = document.querySelector("#repo-sync-status");
 const readonlyBanner = document.querySelector("#readonly-banner");
 const detailTitle = document.querySelector("#detail-title");
 const editorSurface = document.querySelector("#editor-surface");
 const fontSizeSelect = document.querySelector("#font-size-select");
 const fontColorInput = document.querySelector("#font-color-input");
 const toolbarButtons = document.querySelectorAll("[data-command]");
+const githubModal = document.querySelector("#github-modal");
+const closeGitHubModalButton = document.querySelector("#close-github-modal");
+const saveGitHubSettingsButton = document.querySelector("#save-github-settings-button");
+const githubOwnerInput = document.querySelector("#github-owner");
+const githubRepoInput = document.querySelector("#github-repo");
+const githubBranchInput = document.querySelector("#github-branch");
+const githubTokenInput = document.querySelector("#github-token");
 const ITEMS_PER_PAGE = 8;
 const AUTOSAVE_INTERVAL_MS = 5 * 60 * 1000;
 const HANDLE_DB_NAME = "design-archive-handles";
 const HANDLE_STORE_NAME = "handles";
 const DIRECTORY_HANDLE_KEY = "export-directory";
 const CLOUD_REGISTRY_KEY = "design-archive-cloud-sites-v1";
+const PROJECT_DATA_FILE_NAME = "project_data.js";
+const CLOUD_SITES_FILE_NAME = "cloud_sites.js";
+const GITHUB_SYNC_SETTINGS_KEY = "design-archive-github-sync-v1";
+const DEFAULT_GITHUB_SYNC_SETTINGS = {
+  owner: "jiaying19362bristol-lab",
+  repo: "programs-network-site-001",
+  branch: "main",
+  token: ""
+};
 const IS_READONLY_CLOUD = window.location.protocol !== "file:";
 
 let sections = loadSections();
@@ -120,7 +139,10 @@ let saveFeedbackTimeout = null;
 let documentDirectoryHandle = null;
 let autosaveTimerId = null;
 let cloudRegistry = loadCloudRegistry();
+let githubSyncSettings = loadGitHubSyncSettings();
 const sectionPageState = Object.fromEntries(defaultSections.map((section) => [section.id, 0]));
+
+ensureGitHubSyncSettingsInitialized();
 
 renderSections();
 routeFromHash();
@@ -128,6 +150,7 @@ initializeDocumentStorage();
 startAutosaveTimer();
 renderCloudSites();
 applyReadonlyMode();
+updateGitHubSyncStatus();
 
 window.addEventListener("hashchange", routeFromHash);
 cloudSitesButton.addEventListener("click", toggleCloudSitesMenu);
@@ -142,6 +165,8 @@ if (!IS_READONLY_CLOUD) {
   moveProjectButton.addEventListener("click", toggleMoveMenu);
   saveButton.addEventListener("click", saveActiveProject);
   bindFolderButton.addEventListener("click", connectDocumentFolder);
+  githubLoginButton.addEventListener("click", openGitHubModal);
+  uploadGitHubButton.addEventListener("click", uploadProjectDataToGitHub);
   deleteButton.addEventListener("click", deleteActiveProject);
   imageInput.addEventListener("change", handleImageUpload);
   insertImageButton.addEventListener("click", () => imageInput.click());
@@ -165,19 +190,26 @@ if (!IS_READONLY_CLOUD) {
 }
 document.addEventListener("click", handleOutsideMoveMenuClick);
 document.addEventListener("click", handleOutsideCloudMenuClick);
+document.addEventListener("click", handleGitHubModalBackdropClick);
+closeGitHubModalButton?.addEventListener("click", closeGitHubModal);
+saveGitHubSettingsButton?.addEventListener("click", saveGitHubSettingsFromModal);
 
 function loadSections() {
+  if (IS_READONLY_CLOUD) {
+    return normalizeSections(getBundledProjectData());
+  }
+
   const saved = localStorage.getItem(STORAGE_KEY);
 
   if (!saved) {
-    return defaultSections;
+    return normalizeSections(getBundledProjectData());
   }
 
   try {
     const parsed = JSON.parse(saved);
-    return Array.isArray(parsed) ? normalizeSections(parsed) : defaultSections;
+    return Array.isArray(parsed) ? normalizeSections(parsed) : normalizeSections(getBundledProjectData());
   } catch {
-    return defaultSections;
+    return normalizeSections(getBundledProjectData());
   }
 }
 
@@ -322,6 +354,53 @@ function renderCloudSites() {
 
   const latest = sortedSites[0];
   cloudSyncStatus.textContent = `Local-first mode. Latest cloud site updated ${formatTimestamp(latest.lastUpdatedAt)}.`;
+}
+
+function getBundledProjectData() {
+  return Array.isArray(window.__PROJECT_DATA__) ? window.__PROJECT_DATA__ : defaultSections;
+}
+
+function loadGitHubSyncSettings() {
+  const saved = localStorage.getItem(GITHUB_SYNC_SETTINGS_KEY);
+  if (!saved) {
+    return { ...DEFAULT_GITHUB_SYNC_SETTINGS };
+  }
+
+  try {
+    const parsed = JSON.parse(saved);
+    return {
+      owner: typeof parsed.owner === "string" && parsed.owner.trim() ? parsed.owner.trim() : DEFAULT_GITHUB_SYNC_SETTINGS.owner,
+      repo: typeof parsed.repo === "string" && parsed.repo.trim() ? parsed.repo.trim() : DEFAULT_GITHUB_SYNC_SETTINGS.repo,
+      branch: typeof parsed.branch === "string" && parsed.branch.trim() ? parsed.branch.trim() : DEFAULT_GITHUB_SYNC_SETTINGS.branch,
+      token: typeof parsed.token === "string" ? parsed.token.trim() : ""
+    };
+  } catch {
+    return { ...DEFAULT_GITHUB_SYNC_SETTINGS };
+  }
+}
+
+function saveGitHubSyncSettings() {
+  localStorage.setItem(GITHUB_SYNC_SETTINGS_KEY, JSON.stringify(githubSyncSettings));
+}
+
+function ensureGitHubSyncSettingsInitialized() {
+  const mergedSettings = {
+    owner: githubSyncSettings.owner || DEFAULT_GITHUB_SYNC_SETTINGS.owner,
+    repo: githubSyncSettings.repo || DEFAULT_GITHUB_SYNC_SETTINGS.repo,
+    branch: githubSyncSettings.branch || DEFAULT_GITHUB_SYNC_SETTINGS.branch,
+    token: githubSyncSettings.token || DEFAULT_GITHUB_SYNC_SETTINGS.token
+  };
+
+  const changed =
+    mergedSettings.owner !== githubSyncSettings.owner ||
+    mergedSettings.repo !== githubSyncSettings.repo ||
+    mergedSettings.branch !== githubSyncSettings.branch ||
+    mergedSettings.token !== githubSyncSettings.token;
+
+  githubSyncSettings = mergedSettings;
+  if (changed) {
+    saveGitHubSyncSettings();
+  }
 }
 
 function createCard(sectionId, sectionTitle, item) {
@@ -696,6 +775,7 @@ function getActiveItem() {
 function normalizeSections(inputSections) {
   return inputSections.map((section) => ({
     ...section,
+    title: normalizeSectionTitle(section),
     items: Array.isArray(section.items)
       ? section.items.map((item) => ({
           id: item.id ?? crypto.randomUUID(),
@@ -706,6 +786,14 @@ function normalizeSections(inputSections) {
         }))
       : []
   }));
+}
+
+function normalizeSectionTitle(section) {
+  if (section?.id === "other-projects" && (section.title ?? "").trim() === "Others") {
+    return "Maintenance";
+  }
+
+  return section.title ?? "";
 }
 
 function normalizeItemContent(item) {
@@ -810,6 +898,42 @@ function startAutosaveTimer() {
   }, AUTOSAVE_INTERVAL_MS);
 }
 
+function openGitHubModal() {
+  if (!githubModal) {
+    return;
+  }
+
+  githubOwnerInput.value = githubSyncSettings.owner;
+  githubRepoInput.value = githubSyncSettings.repo;
+  githubBranchInput.value = githubSyncSettings.branch;
+  githubTokenInput.value = githubSyncSettings.token;
+  githubModal.classList.remove("hidden");
+}
+
+function closeGitHubModal() {
+  githubModal?.classList.add("hidden");
+}
+
+function handleGitHubModalBackdropClick(event) {
+  const target = event.target;
+  if (target instanceof HTMLElement && target.dataset.action === "close-github-modal") {
+    closeGitHubModal();
+  }
+}
+
+function saveGitHubSettingsFromModal() {
+  githubSyncSettings = {
+    owner: githubOwnerInput.value.trim() || DEFAULT_GITHUB_SYNC_SETTINGS.owner,
+    repo: githubRepoInput.value.trim() || DEFAULT_GITHUB_SYNC_SETTINGS.repo,
+    branch: githubBranchInput.value.trim() || DEFAULT_GITHUB_SYNC_SETTINGS.branch,
+    token: githubTokenInput.value.trim()
+  };
+
+  saveGitHubSyncSettings();
+  updateGitHubSyncStatus("GitHub login saved in this browser.");
+  closeGitHubModal();
+}
+
 async function connectDocumentFolder() {
   if (IS_READONLY_CLOUD) {
     return;
@@ -836,6 +960,42 @@ async function connectDocumentFolder() {
     if (error?.name !== "AbortError") {
       documentStatus.textContent = "Unable to bind a local folder for Word autosave.";
     }
+  }
+}
+
+async function uploadProjectDataToGitHub() {
+  if (IS_READONLY_CLOUD) {
+    return;
+  }
+
+  if (!githubSyncSettings.token) {
+    updateGitHubSyncStatus("GitHub token missing. Open GitHub Login first.");
+    openGitHubModal();
+    return;
+  }
+
+  if (activeProjectRef) {
+    saveActiveProject();
+  }
+
+  const originalLabel = uploadGitHubButton?.textContent ?? "Upload To GitHub";
+  setGitHubUploadBusyState(true, "Uploading...");
+  updateGitHubSyncStatus("Uploading project data to GitHub...");
+
+  try {
+    await uploadProjectDataWithRetries();
+    const siteUrl = buildGitHubPagesUrl(githubSyncSettings.owner, githubSyncSettings.repo);
+    const timestamp = new Date().toISOString();
+    upsertCloudSite({
+      repo: githubSyncSettings.repo,
+      url: siteUrl,
+      lastUpdatedAt: timestamp
+    });
+    updateGitHubSyncStatus(`Upload succeeded. Cloud site: ${siteUrl}`);
+  } catch (error) {
+    updateGitHubSyncStatus(`Upload failed: ${describeGitHubUploadError(error)}`);
+  } finally {
+    setGitHubUploadBusyState(false, originalLabel);
   }
 }
 
@@ -904,6 +1064,207 @@ async function ensureProjectDocument(project) {
   }
 }
 
+function buildProjectDataSnapshot() {
+  return `window.__PROJECT_DATA__ = ${JSON.stringify(sections, null, 2)};\n`;
+}
+
+async function uploadProjectDataWithRetries() {
+  const maxAttempts = 3;
+  let lastError = null;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      await uploadProjectDataOnce();
+      return;
+    } catch (error) {
+      lastError = error;
+      if (!shouldRetryGitHubUpload(error) || attempt === maxAttempts) {
+        throw error;
+      }
+
+      updateGitHubSyncStatus(`Upload attempt ${attempt} failed. Retrying...`);
+      await delay(1200 * attempt);
+    }
+  }
+
+  throw lastError ?? new Error("Unknown upload failure.");
+}
+
+async function uploadProjectDataOnce() {
+  const timestamp = new Date().toISOString();
+  const commitMessage = `Update project data ${timestamp}`;
+  await putGitHubFile("index.html", await loadLocalTextFile("index.html"), `Update index ${timestamp}`);
+  await putGitHubFile("styles.css", await loadLocalTextFile("styles.css"), `Update styles ${timestamp}`);
+  await putGitHubFile("script.js", await loadLocalTextFile("script.js"), `Update script ${timestamp}`);
+  await putGitHubFile(PROJECT_DATA_FILE_NAME, buildProjectDataSnapshot(), commitMessage);
+  await putGitHubFile(CLOUD_SITES_FILE_NAME, buildCloudSitesSnapshot(timestamp), `Update cloud registry ${timestamp}`);
+}
+
+async function putGitHubFile(path, content, message) {
+  const sha = await getGitHubFileSha(path);
+  const response = await githubApiFetch(buildGitHubContentsUrl(path), {
+    method: "PUT",
+    headers: buildGitHubHeaders(),
+    body: JSON.stringify({
+      message,
+      branch: githubSyncSettings.branch,
+      content: base64EncodeUtf8(content),
+      sha
+    })
+  });
+
+  if (!response.ok) {
+    throw await createGitHubApiError(response);
+  }
+}
+
+async function getGitHubFileSha(path) {
+  const response = await githubApiFetch(buildGitHubContentsUrl(path, true), {
+    method: "GET",
+    headers: buildGitHubHeaders()
+  });
+
+  if (response.status === 404) {
+    return undefined;
+  }
+
+  if (!response.ok) {
+    throw await createGitHubApiError(response);
+  }
+
+  const payload = await response.json();
+  return typeof payload.sha === "string" ? payload.sha : undefined;
+}
+
+function buildCloudSitesSnapshot(timestamp) {
+  const nextRegistry = mergeCloudSiteEntry(cloudRegistry, {
+    repo: githubSyncSettings.repo,
+    url: buildGitHubPagesUrl(githubSyncSettings.owner, githubSyncSettings.repo),
+    lastUpdatedAt: timestamp
+  });
+
+  return `window.__CLOUD_SITES__ = ${JSON.stringify(nextRegistry, null, 2)};\n`;
+}
+
+function mergeCloudSiteEntry(registry, entry) {
+  const nextRegistry = Array.isArray(registry) ? [...registry] : [];
+  const existingIndex = nextRegistry.findIndex((site) => site.url === entry.url);
+  if (existingIndex >= 0) {
+    nextRegistry[existingIndex] = { ...nextRegistry[existingIndex], ...entry };
+  } else {
+    nextRegistry.unshift(entry);
+  }
+
+  return nextRegistry;
+}
+
+function buildGitHubContentsUrl(path, includeRef = false) {
+  const encodedPath = path.split("/").map(encodeURIComponent).join("/");
+  const url = new URL(`https://api.github.com/repos/${githubSyncSettings.owner}/${githubSyncSettings.repo}/contents/${encodedPath}`);
+  if (includeRef) {
+    url.searchParams.set("ref", githubSyncSettings.branch);
+  }
+
+  return url.toString();
+}
+
+function buildGitHubHeaders() {
+  return {
+    Accept: "application/vnd.github+json",
+    Authorization: `Bearer ${githubSyncSettings.token}`,
+    "Content-Type": "application/json"
+  };
+}
+
+async function githubApiFetch(url, options) {
+  try {
+    return await fetch(url, options);
+  } catch {
+    throw new Error("Network request to GitHub failed.");
+  }
+}
+
+async function createGitHubApiError(response) {
+  let message = `GitHub API error ${response.status}`;
+
+  try {
+    const payload = await response.json();
+    if (payload?.message) {
+      message = payload.message;
+    }
+  } catch {
+    // Keep the default message.
+  }
+
+  const error = new Error(message);
+  error.status = response.status;
+  return error;
+}
+
+function shouldRetryGitHubUpload(error) {
+  const status = Number(error?.status ?? 0);
+  if (!status) {
+    return true;
+  }
+
+  return status >= 500 || status === 409;
+}
+
+function describeGitHubUploadError(error) {
+  const status = Number(error?.status ?? 0);
+  if (status === 401 || status === 403) {
+    return "GitHub token is invalid or does not have permission.";
+  }
+
+  if (status === 404) {
+    return "GitHub owner, repository, or branch was not found.";
+  }
+
+  if (status === 409) {
+    return "GitHub reported a content conflict. Try uploading again.";
+  }
+
+  return error?.message || "Unknown upload error.";
+}
+
+function setGitHubUploadBusyState(isBusy, label) {
+  if (!uploadGitHubButton) {
+    return;
+  }
+
+  uploadGitHubButton.disabled = isBusy;
+  uploadGitHubButton.textContent = label;
+}
+
+function buildGitHubPagesUrl(owner, repo) {
+  return `https://${owner}.github.io/${repo}/`;
+}
+
+function base64EncodeUtf8(value) {
+  const bytes = new TextEncoder().encode(value);
+  let binary = "";
+  bytes.forEach((byte) => {
+    binary += String.fromCharCode(byte);
+  });
+
+  return btoa(binary);
+}
+
+function delay(ms) {
+  return new Promise((resolve) => {
+    window.setTimeout(resolve, ms);
+  });
+}
+
+async function loadLocalTextFile(path) {
+  const response = await fetch(path, { cache: "no-store" });
+  if (!response.ok) {
+    throw new Error(`Failed to read local file: ${path}`);
+  }
+
+  return response.text();
+}
+
 function updateDocumentStatus(item, overrideMessage = "") {
   if (overrideMessage) {
     documentStatus.textContent = overrideMessage;
@@ -932,6 +1293,29 @@ function updateDocumentStatus(item, overrideMessage = "") {
   const fileName = item.documentFileName || buildDocumentFileName(item.title);
   documentStatus.textContent = `Word autosave folder connected. File: ${fileName}`;
   documentStatus.classList.add("is-ready");
+}
+
+function updateGitHubSyncStatus(overrideMessage = "") {
+  if (!repoSyncStatus) {
+    return;
+  }
+
+  if (overrideMessage) {
+    repoSyncStatus.textContent = overrideMessage;
+    return;
+  }
+
+  if (IS_READONLY_CLOUD) {
+    repoSyncStatus.textContent = "Cloud view uses read-only mode.";
+    return;
+  }
+
+  if (!githubSyncSettings.token) {
+    repoSyncStatus.textContent = "GitHub upload is not configured. Open GitHub Login and save your token.";
+    return;
+  }
+
+  repoSyncStatus.textContent = `GitHub upload ready for ${githubSyncSettings.owner}/${githubSyncSettings.repo} on ${githubSyncSettings.branch}.`;
 }
 
 function upsertCloudSite(entry) {

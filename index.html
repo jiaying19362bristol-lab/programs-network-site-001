@@ -10,11 +10,18 @@
   <div class="page-shell">
     <section id="home-view">
       <div class="home-topbar">
-        <div class="cloud-sites-wrap">
-          <button id="cloud-sites-button" class="secondary-button topbar-button" type="button">Cloud Sites</button>
-          <div id="cloud-sites-menu" class="cloud-sites-menu hidden"></div>
+        <div class="topbar-actions">
+          <div class="cloud-sites-wrap">
+            <button id="cloud-sites-button" class="secondary-button topbar-button" type="button">Cloud Sites</button>
+            <div id="cloud-sites-menu" class="cloud-sites-menu hidden"></div>
+          </div>
+          <button id="github-login-button" class="secondary-button topbar-button" type="button">GitHub Login</button>
+          <button id="upload-github-button" class="primary-button topbar-button" type="button">Upload To GitHub</button>
         </div>
-        <p id="cloud-sync-status" class="cloud-sync-status">Local-first mode. No cloud sites registered yet.</p>
+        <div class="topbar-status">
+          <p id="cloud-sync-status" class="cloud-sync-status">Local-first mode. No cloud sites registered yet.</p>
+          <p id="repo-sync-status" class="cloud-sync-status">GitHub upload is not configured.</p>
+        </div>
       </div>
       <main id="section-list" class="section-list five-column-layout" aria-live="polite"></main>
     </section>
@@ -102,7 +109,38 @@
     </article>
   </template>
 
+  <div id="github-modal" class="modal-shell hidden" role="dialog" aria-modal="true" aria-labelledby="github-modal-title">
+    <div class="modal-backdrop" data-action="close-github-modal"></div>
+    <article class="modal-panel">
+      <div class="modal-header">
+        <h2 id="github-modal-title" class="modal-title">GitHub Login</h2>
+        <button id="close-github-modal" class="secondary-button modal-close-button" type="button">Close</button>
+      </div>
+      <p class="modal-copy">Store a GitHub personal access token locally in this browser, then upload project data directly to your GitHub site repo.</p>
+      <label class="detail-label">
+        <span>Owner</span>
+        <input id="github-owner" type="text" placeholder="GitHub owner">
+      </label>
+      <label class="detail-label">
+        <span>Repository</span>
+        <input id="github-repo" type="text" placeholder="Repository name">
+      </label>
+      <label class="detail-label">
+        <span>Branch</span>
+        <input id="github-branch" type="text" placeholder="main">
+      </label>
+      <label class="detail-label">
+        <span>Token</span>
+        <input id="github-token" type="password" placeholder="GitHub token with repo access">
+      </label>
+      <div class="detail-actions">
+        <button id="save-github-settings-button" class="primary-button" type="button">Save GitHub Login</button>
+      </div>
+    </article>
+  </div>
+
   <script src="cloud_sites.js"></script>
+  <script src="project_data.js"></script>
   <script src="script.js"></script>
 </body>
 </html>
