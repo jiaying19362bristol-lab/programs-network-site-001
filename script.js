@@ -972,6 +972,8 @@ async function uploadProjectDataToGitHub() {
 
   if (activeProjectRef) {
     saveActiveProject();
+  } else {
+    saveSections();
   }
 
   const originalLabel = uploadGitHubButton?.textContent ?? "Upload To GitHub";
@@ -996,13 +998,14 @@ async function uploadProjectDataToGitHub() {
 }
 
 async function uploadProjectDataViaBridge() {
+  const payloadSections = buildUploadSectionsSnapshot();
   const response = await fetch(`${LOCAL_PUBLISH_BRIDGE_URL}/publish`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json"
     },
     body: JSON.stringify({
-      sections
+      sections: payloadSections
     })
   }).catch(() => {
     throw new Error("Local publish helper is not running.");
@@ -1026,6 +1029,22 @@ async function uploadProjectDataViaBridge() {
   }
 
   return response.json();
+}
+
+function buildUploadSectionsSnapshot() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed)) {
+        return normalizeSections(parsed);
+      }
+    }
+  } catch {
+    // Fall back to the current in-memory sections state.
+  }
+
+  return normalizeSections(sections);
 }
 
 async function persistActiveProjectDocument(isAutosave = false) {
