@@ -5,24 +5,17 @@ window.__PROJECT_DATA__ = [
     "title": "Embedded Development",
     "items": [
       {
-        "id": "embedded-laser-cannon-fighting-trolley",
+        "id": "51ac02da-c594-410a-adbf-9d399e96e8d3",
         "title": "Laser Cannon Fighting Trolley",
-        "description": "Autonomous vehicle platform with target tracking, drive control, and real-time embedded coordination.",
-        "content": "<p>Use this white paper to store the full design process, hardware architecture, control strategy, and experiment notes for the laser cannon fighting trolley.</p>",
+        "description": "No detailed text provided yet.",
+        "content": "<p>No detailed text provided yet.</p>",
         "documentFileName": null
       },
       {
-        "id": "embedded-punching-robot-arm",
+        "id": "26f391fd-2956-4db3-9a13-205f55647556",
         "title": "Punching Robot Arm",
         "description": "Servo-driven robotic arm project focused on timing, force control, and embedded motion sequencing.",
-        "content": "<p>Document the structure, actuator selection, control loops, and test observations for the punching robot arm here.</p>",
-        "documentFileName": null
-      },
-      {
-        "id": "embedded-control-glove",
-        "title": "Control Glove",
-        "description": "Wearable input glove used to capture gestures and map hand motion into remote device commands.",
-        "content": "<p>Write about sensor placement, gesture recognition logic, communication protocol, and user testing for the control glove.</p>",
+        "content": "<p>No detailed text provided yet.</p>",
         "documentFileName": null
       }
     ]
@@ -33,10 +26,10 @@ window.__PROJECT_DATA__ = [
     "title": "FPGA Development",
     "items": [
       {
-        "id": "fpga-three-stage-state-machine",
+        "id": "4a06468f-87a6-45da-b928-f1ad912dc197",
         "title": "Three-Stage State Machine",
-        "description": "Pipeline-oriented FPGA controller built around a three-stage state machine for deterministic sequencing.",
-        "content": "<p>Capture the module breakdown, timing constraints, state transitions, and verification results for the FPGA design here.</p>",
+        "description": "No detailed text provided yet.",
+        "content": "<p>No detailed text provided yet.</p>",
         "documentFileName": null
       }
     ]
@@ -47,10 +40,10 @@ window.__PROJECT_DATA__ = [
     "title": "Chip Design",
     "items": [
       {
-        "id": "chip-8-in-8-out-packet-switching",
+        "id": "98711ebd-e748-4f85-9495-21049a0adfeb",
         "title": "8 In / 8 Out Packet Switching",
         "description": "Switching architecture study for balanced packet routing with structured input-output arbitration.",
-        "content": "<p>Use this space for architecture notes, packet scheduling rules, RTL structure, and simulation conclusions.</p>",
+        "content": "<p>No detailed text provided yet.</p>",
         "documentFileName": null
       }
     ]
@@ -61,10 +54,10 @@ window.__PROJECT_DATA__ = [
     "title": "Hardware Design",
     "items": [
       {
-        "id": "hardware-slow-start-device-schematic",
+        "id": "341bb66c-7ae2-4e62-a798-1977dda512fd",
         "title": "Slow-Start Device Schematic",
-        "description": "Schematic-based hardware design for staged power-up and inrush current control.",
-        "content": "<p>Describe the schematic choices, component values, start-up curve, and test records for the slow-start device.</p>",
+        "description": "No detailed text provided yet.",
+        "content": "<p>No detailed text provided yet.</p>",
         "documentFileName": null
       }
     ]
@@ -75,10 +68,10 @@ window.__PROJECT_DATA__ = [
     "title": "Maintenance",
     "items": [
       {
-        "id": "maintenance-new-direction",
-        "title": "New Direction",
-        "description": "Use the plus button to add a new idea, prototype, experiment, or cross-discipline design record.",
-        "content": "<p>Store the detailed write-up for any additional design work in this page.</p>",
+        "id": "aeb38739-ac4f-460c-ac05-47fef3687236",
+        "title": "电饭煲拆解",
+        "description": "1. 取下所有螺丝，包含隐藏。2. 用硬塑料或一字螺丝刀解开卡扣，再用硬质银行卡沿边拆解卡扣。",
+        "content": "<p>1. 取下所有螺丝，包含隐藏。</p><p>2. 用硬塑料或一字螺丝刀解开卡扣，再用硬质银行卡沿边拆解卡扣。</p><p><br></p>",
         "documentFileName": null
       }
     ]
