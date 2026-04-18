@@ -124,6 +124,7 @@ const CLOUD_REGISTRY_KEY = "design-archive-cloud-sites-v1";
 const PROJECT_DATA_FILE_NAME = "project_data.js";
 const CLOUD_SITES_FILE_NAME = "cloud_sites.js";
 const GITHUB_SYNC_SETTINGS_KEY = "design-archive-github-sync-v1";
+const LOCAL_PUBLISH_BRIDGE_URL = "http://127.0.0.1:32145";
 const DEFAULT_GITHUB_SYNC_SETTINGS = {
   owner: "jiaying19362bristol-lab",
   repo: "programs-network-site-001",
@@ -151,6 +152,7 @@ startAutosaveTimer();
 renderCloudSites();
 applyReadonlyMode();
 updateGitHubSyncStatus();
+void refreshLocalPublishHelperStatus();
 
 window.addEventListener("hashchange", routeFromHash);
 cloudSitesButton.addEventListener("click", toggleCloudSitesMenu);
@@ -968,12 +970,6 @@ async function uploadProjectDataToGitHub() {
     return;
   }
 
-  if (!githubSyncSettings.token) {
-    updateGitHubSyncStatus("GitHub token missing. Open GitHub Login first.");
-    openGitHubModal();
-    return;
-  }
-
   if (activeProjectRef) {
     saveActiveProject();
   }
@@ -983,7 +979,7 @@ async function uploadProjectDataToGitHub() {
   updateGitHubSyncStatus("Uploading project data to GitHub...");
 
   try {
-    await uploadProjectDataWithRetries();
+    await uploadProjectDataViaBridge();
     const siteUrl = buildGitHubPagesUrl(githubSyncSettings.owner, githubSyncSettings.repo);
     const timestamp = new Date().toISOString();
     upsertCloudSite({
@@ -997,6 +993,39 @@ async function uploadProjectDataToGitHub() {
   } finally {
     setGitHubUploadBusyState(false, originalLabel);
   }
+}
+
+async function uploadProjectDataViaBridge() {
+  const response = await fetch(`${LOCAL_PUBLISH_BRIDGE_URL}/publish`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      sections
+    })
+  }).catch(() => {
+    throw new Error("Local publish helper is not running.");
+  });
+
+  if (!response.ok) {
+    let message = "Local publish helper failed.";
+
+    try {
+      const payload = await response.json();
+      if (payload?.message) {
+        message = payload.message;
+      }
+    } catch {
+      // Keep the default message.
+    }
+
+    const error = new Error(message);
+    error.status = response.status;
+    throw error;
+  }
+
+  return response.json();
 }
 
 async function persistActiveProjectDocument(isAutosave = false) {
@@ -1310,12 +1339,24 @@ function updateGitHubSyncStatus(overrideMessage = "") {
     return;
   }
 
-  if (!githubSyncSettings.token) {
-    repoSyncStatus.textContent = "GitHub upload is not configured. Open GitHub Login and save your token.";
+  repoSyncStatus.textContent = "Upload button uses the local publish helper.";
+}
+
+async function refreshLocalPublishHelperStatus() {
+  if (IS_READONLY_CLOUD || !repoSyncStatus) {
     return;
   }
 
-  repoSyncStatus.textContent = `GitHub upload ready for ${githubSyncSettings.owner}/${githubSyncSettings.repo} on ${githubSyncSettings.branch}.`;
+  try {
+    const response = await fetch(`${LOCAL_PUBLISH_BRIDGE_URL}/health`, { cache: "no-store" });
+    if (!response.ok) {
+      throw new Error("Local publish helper is unavailable.");
+    }
+
+    repoSyncStatus.textContent = "Upload button is ready. Local publish helper connected.";
+  } catch {
+    repoSyncStatus.textContent = "Upload button needs the local publish helper running.";
+  }
 }
 
 function upsertCloudSite(entry) {
