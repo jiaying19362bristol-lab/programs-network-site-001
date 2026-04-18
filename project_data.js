@@ -10,13 +10,6 @@ window.__PROJECT_DATA__ = [
                           "description":  "No detailed text provided yet.",
                           "content":  "\u003cp\u003eNo detailed text provided yet.\u003c/p\u003e",
                           "documentFileName":  null
-                      },
-                      {
-                          "id":  "26f391fd-2956-4db3-9a13-205f55647556",
-                          "title":  "Punching Robot Arm",
-                          "description":  "Servo-driven robotic arm project focused on timing, force control, and embedded motion sequencing.",
-                          "content":  "\u003cp\u003eNo detailed text provided yet.\u003c/p\u003e",
-                          "documentFileName":  null
                       }
                   ]
     },
